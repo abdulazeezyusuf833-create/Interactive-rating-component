@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Rating Component</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #eef2f7;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+        }
+
+        .rating-card {
+            background: #ffffff;
+            border-radius: 1.5rem;
+            padding: 2.5rem 2rem;
+            max-width: 440px;
+            width: 100%;
+            box-shadow: 0 15px 35px -10px rgba(0, 20, 40, 0.15);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            color: #1a2e3b;
+            margin-bottom: 0.4rem;
+        }
+
+        .subhead {
+            color: #5d7686;
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+        }
+
+        .stars-container {
+            display: flex;
+            justify-content: center;
+            gap: 0.4rem;
+            margin-bottom: 1.8rem;
+        }
+
+        .star-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 2.8rem;
+            line-height: 1;
+            color: #cbd9e3;
+            width: 3.4rem;
+            height: 3.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: color 0.15s ease, transform 0.15s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .star-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .star-btn.filled {
+            color: #f5b342;
+        }
+
+        .star-btn:focus-visible {
+            outline: 3px solid #8bb9e0;
+            outline-offset: 2px;
+        }
+
+        .feedback {
+            min-height: 2.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #1f3e4f;
+            margin-bottom: 1.5rem;
+            transition: color 0.2s ease;
+        }
+
+        .feedback.error {
+            color: #c0392b;
+        }
+
+        .feedback.success {
+            color: #1e8449;
+        }
+
+        .submit-btn,
+        .reset-btn {
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 0.6rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.1s ease;
+        }
+
+        .submit-btn {
+            background: #2e5266;
+            color: #ffffff;
+            width: 100%;
+            margin-bottom: 0.6rem;
+        }
+
+        .submit-btn:hover {
+            background: #1b3b4f;
+        }
+
+        .submit-btn:active {
+            transform: scale(0.98);
+        }
+
+        .reset-btn {
+            background: transparent;
+            color: #5d7686;
+            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+        }
+
+        .reset-btn:hover {
+            color: #1a2e3b;
+            text-decoration: underline;
+        }
+
+        @media (max-width: 400px) {
+            .star-btn {
+                font-size: 2.2rem;
+                width: 2.8rem;
+                height: 2.8rem;
+            }
+            .rating-card {
+                padding: 1.8rem 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="rating-card">
+        <h1>Rate your experience</h1>
+        <p class="subhead">Select a rating from 1 to 5 stars</p>
+
+        <div class="stars-container" id="starsContainer">
+            <button class="star-btn" data-value="1" aria-label="Rate 1 out of 5">★</button>
+            <button class="star-btn" data-value="2" aria-label="Rate 2 out of 5">★</button>
+            <button class="star-btn" data-value="3" aria-label="Rate 3 out of 5">★</button>
+            <button class="star-btn" data-value="4" aria-label="Rate 4 out of 5">★</button>
+            <button class="star-btn" data-value="5" aria-label="Rate 5 out of 5">★</button>
+        </div>
+
+        <!-- feedback area: shows selection hint, error, or submission confirmation -->
+        <div class="feedback" id="feedbackMessage" role="status" aria-live="polite"></div>
+
+        <button class="submit-btn" id="submitButton">Submit Rating</button>
+        <button class="reset-btn" id="resetButton">Clear selection</button>
+    </div>
+
+    <script>
+        (function () {
+            const starsContainer = document.getElementById('starsContainer');
+            const starButtons = document.querySelectorAll('.star-btn');
+            const feedbackEl = document.getElementById('feedbackMessage');
+            const submitBtn = document.getElementById('submitButton');
+            const resetBtn = document.getElementById('resetButton');
+
+            let currentRating = 0;       // 0 = nothing selected
+            let submittedRating = null;  // last submitted value, or null
+
+            // Visual: paint stars up to the given rating
+            function paintStars(rating) {
+                starButtons.forEach((star, index) => {
+                    star.classList.toggle('filled', index + 1 <= rating);
+                });
+            }
+
+            // Feedback helpers
+            function showHint() {
+                feedbackEl.textContent = currentRating === 0
+                    ? 'No rating selected yet.'
+                    : `You selected ${currentRating} out of 5.`;
+                feedbackEl.className = 'feedback';
+            }
+
+            function showError(text) {
+                feedbackEl.textContent = text;
+                feedbackEl.className = 'feedback error';
+            }
+
+            function showSuccess(text) {
+                feedbackEl.textContent = text;
+                feedbackEl.className = 'feedback success';
+            }
+
+            // Selecting a star: update state + visuals + hint (does NOT submit)
+            function selectRating(value) {
+                currentRating = value;
+                paintStars(value);
+                showHint();
+            }
+
+            // Star clicks (event delegation — one listener for all stars)
+            starsContainer.addEventListener('click', (event) => {
+                const star = event.target.closest('.star-btn');
+                if (!star) return;
+                selectRating(Number(star.dataset.value));
+            });
+
+            // Submit: validate, then confirm
+            submitBtn.addEventListener('click', () => {
+                if (currentRating === 0) {
+                    showError('Please select a rating before submitting.');
+                    return;
+                }
+                submittedRating = currentRating;
+                showSuccess(`Thanks! You rated us ${submittedRating} out of 5.`);
+            });
+
+            // Reset: clear everything back to initial state
+            resetBtn.addEventListener('click', () => {
+                currentRating = 0;
+                submittedRating = null;
+                paintStars(0);
+                showHint();
+            });
+
+            // Initial state
+            paintStars(0);
+            showHint();
+        })();
+    </script>
+</body>
+</html>
